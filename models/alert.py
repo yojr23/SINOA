@@ -1,0 +1,1 @@
+# Define la clase de alerta (tipo, mensaje, hora)

@@ -1,0 +1,1 @@
+# Genera y muestra gráficos de los datos

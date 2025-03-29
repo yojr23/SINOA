@@ -1,0 +1,1 @@
+# Modelo para manejar la desviación del sensor
