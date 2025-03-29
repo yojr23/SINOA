@@ -6,10 +6,10 @@ from utils.data_loader import consolidate_data, consolidar_o_cargar_historico
 from observers.alert_observer import AlertObserver
 
 # Rutas de datos
-HISTORICAL_DATA_PATH = 'sistema_alertas/data/registro_historico/consolidated_data.csv'
-INPUT_FOLDER = 'sistema_alertas/data/pruebas_anteriores/'
-REVIEWED_FOLDER = 'sistema_alertas/data/pruebas_anteriores_revisados/'
-REJECTED_FOLDER = 'sistema_alertas/data/pruebas_rechazadas/'
+HISTORICAL_DATA_PATH = 'data/registro_historico/consolidated_data.csv'
+INPUT_FOLDER = 'data/pruebas_anteriores'
+REVIEWED_FOLDER = 'data/pruebas_anteriores_revisados/'
+REJECTED_FOLDER = 'data/pruebas_rechazadas/'
 
 # Asegurar que las carpetas existen
 os.makedirs(INPUT_FOLDER, exist_ok=True)
