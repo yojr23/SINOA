@@ -12,8 +12,7 @@ config.setup_app()
 load_dotenv()
 
 
-print("Usuario:", os.getenv('EMAIL_USER'))
-print("Contraseña:", os.getenv('EMAIL_PASS'))
+
 
 def main():
     st.title("Alert System Dashboard")
