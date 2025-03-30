@@ -10,13 +10,15 @@ HISTORICAL_DATA_PATH = 'data/registro_historico/consolidated_data.csv'
 INPUT_FOLDER = 'data/pruebas_anteriores'
 REVIEWED_FOLDER = 'data/pruebas_anteriores_revisados/'
 REJECTED_FOLDER = 'data/pruebas_rechazadas/'
+CONSOLIDATED_FOLDER = 'data/pruebas_consolidadas/'
 
 # Asegurar que las carpetas existen
 os.makedirs(INPUT_FOLDER, exist_ok=True)
 os.makedirs(REVIEWED_FOLDER, exist_ok=True)
 os.makedirs(REJECTED_FOLDER, exist_ok=True)
+os.makedirs(CONSOLIDATED_FOLDER, exist_ok=True)
 
-drift_manager = SensorDriftManager(HISTORICAL_DATA_PATH)
+drift_manager = SensorDriftManager(HISTORICAL_DATA_PATH, AlertObserver)
 
 # Lista de observadores
 observers = []
@@ -38,6 +40,7 @@ def check_folder_status():
     archivos_pruebas = [f for f in os.listdir(INPUT_FOLDER) if not f.startswith('.DS_Store')]
     archivos_revisados = [f for f in os.listdir(REVIEWED_FOLDER) if not f.startswith('.DS_Store')]
     archivos_rechazados = [f for f in os.listdir(REJECTED_FOLDER) if not f.startswith('.DS_Store')]
+    archivos_consolidados = [f for f in os.listdir(CONSOLIDATED_FOLDER) if not f.startswith('.DS_Store')]
     
     st.subheader("Estado de las Carpetas de Datos")
     
@@ -54,6 +57,9 @@ def check_folder_status():
     
     if archivos_rechazados:
         show_alert(f"⚠️ {len(archivos_rechazados)} archivo(s) fueron rechazados para revisión manual.", "WARNING")
+    
+    if archivos_consolidados:
+        st.success(f"📂 {len(archivos_consolidados)} archivo(s) consolidados en 'pruebas_consolidadas'.")
 
 def run_gui():
     st.title("Gestión de Datos Históricos")
@@ -65,7 +71,7 @@ def run_gui():
     if st.button("Cargar Datos Históricos", key="cargar_hist"):
         try:
             archivos_antes = len(os.listdir(INPUT_FOLDER))
-            df = consolidar_o_cargar_historico()
+            df, _ = consolidar_o_cargar_historico()
             archivos_despues = len(os.listdir(INPUT_FOLDER))
             archivos_cargados = archivos_antes - archivos_despues
             
@@ -78,6 +84,7 @@ def run_gui():
             st.session_state["ultima_carga"] = time.strftime("%Y-%m-%d %H:%M:%S")
         except FileNotFoundError:
             show_alert("No hay datos históricos disponibles.", "NO_DATA")
+        st.experimental_rerun()
     
     if "ultima_carga" in st.session_state:
         st.info(f"Última carga de datos: {st.session_state['ultima_carga']}")
@@ -91,9 +98,9 @@ def run_gui():
         else:
             try:
                 archivos_antes = len(archivos_validos)
-                consolidate_data(REVIEWED_FOLDER, HISTORICAL_DATA_PATH, REVIEWED_FOLDER)
+                rejected_count = consolidate_data(REVIEWED_FOLDER, HISTORICAL_DATA_PATH, CONSOLIDATED_FOLDER, REJECTED_FOLDER)
                 archivos_despues = len([f for f in os.listdir(REVIEWED_FOLDER) if f.endswith(('.xls', '.xlsx'))])
-                archivos_consolidados = archivos_antes - archivos_despues
+                archivos_consolidados = archivos_antes - archivos_despues - rejected_count
                 
                 if archivos_consolidados > 0:
                     st.success(f"Datos consolidados correctamente. Se consolidaron {archivos_consolidados} archivos.")
@@ -103,6 +110,7 @@ def run_gui():
                     show_alert("No se consolidaron nuevos archivos.", "NO_DATA")
             except Exception as e:
                 show_alert(f"Error al consolidar los datos: {str(e)}", "CRITICAL")
+        st.experimental_rerun()
     
     if "ultima_consolidacion" in st.session_state:
         st.info(f"Última consolidación de datos: {st.session_state['ultima_consolidacion']}")

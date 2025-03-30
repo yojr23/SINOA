@@ -34,12 +34,15 @@ def load_and_clean_excel(file_path):
     except Exception as e:
         raise ValueError(f"Error procesando {file_path}: {str(e)}")
 
-def consolidate_data(input_folder, output_file, reviewed_folder, rejected_folder):
+def consolidate_data(input_folder, output_file, consolidated_folder, rejected_folder):
     """
-    Consolida datos de archivos Excel en un único CSV, moviendo los inválidos a rechazados.
+    Consolida datos de archivos Excel en un único CSV, moviendo los inválidos a rechazados y los válidos a consolidados.
     """
     consolidated_data = []
     rejected_count = 0
+    
+    os.makedirs(consolidated_folder, exist_ok=True)
+    os.makedirs(rejected_folder, exist_ok=True)
     
     for file_name in os.listdir(input_folder):
         file_path = os.path.join(input_folder, file_name)
@@ -47,7 +50,7 @@ def consolidate_data(input_folder, output_file, reviewed_folder, rejected_folder
             try:
                 cleaned_data = load_and_clean_excel(file_path)
                 consolidated_data.extend(cleaned_data)
-                os.rename(file_path, os.path.join(reviewed_folder, file_name))
+                os.rename(file_path, os.path.join(consolidated_folder, file_name))
             except ValueError:
                 os.rename(file_path, os.path.join(rejected_folder, file_name))
                 rejected_count += 1
@@ -65,6 +68,7 @@ def consolidar_o_cargar_historico():
     archivo_consolidado = 'sistema_alertas/data/registro_historico/consolidated_data.csv'
     carpeta_rechazados = 'sistema_alertas/data/pruebas_rechazadas'
     carpeta_revisados = 'sistema_alertas/data/pruebas_anteriores_revisados'
+    carpeta_consolidados = 'sistema_alertas/data/pruebas_consolidadas'
     
     if not os.listdir(carpeta_pruebas):
         if os.path.exists(archivo_consolidado):
@@ -72,5 +76,5 @@ def consolidar_o_cargar_historico():
         else:
             raise FileNotFoundError("No se encontró el archivo consolidado histórico.")
     
-    rejected_count = consolidate_data(carpeta_pruebas, archivo_consolidado, carpeta_revisados, carpeta_rechazados)
+    rejected_count = consolidate_data(carpeta_pruebas, archivo_consolidado, carpeta_revisados, carpeta_consolidados, carpeta_rechazados)
     return pd.read_csv(archivo_consolidado), rejected_count

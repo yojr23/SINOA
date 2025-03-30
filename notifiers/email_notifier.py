@@ -17,7 +17,7 @@ class EmailNotifier(AlertObserver):
         """
         Envía un correo si el tipo de alerta es WARNING o CRITICAL.
         """
-        if alert_type in ["WARNING", "CRITICAL"]:
+        if alert_type in ["CRITICAL"]:
             subject = f"Alerta {alert_type} - Sistema de Oxígeno"
             body = f"{datetime.now()} - {message}"
             msg = create_email_message(self.sender_email, self.recipient_email, subject, body)
