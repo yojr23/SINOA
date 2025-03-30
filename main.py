@@ -19,7 +19,6 @@ def main():
         sender_password=os.getenv('EMAIL_PASS'),
         recipient_email='juniorrincon1992@hotmail.com'
     )
-    print(f"SMTP_SERVER: {os.getenv('SMTP_SERVER')}")
     # Pasar el notificador de correos a menu_view
     menu_view(email_notifier)
 
