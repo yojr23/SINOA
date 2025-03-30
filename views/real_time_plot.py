@@ -28,7 +28,8 @@ class RealTimePlot:
         new_data = self.data_ingestion.get_latest_data()
         
         if new_data is not None:
-            timestamp, nivel_oxigeno = new_data['timestamp'], new_data['nivel_oxigeno']
+            timestamp = time.time()  # Use current time for x-axis
+            nivel_oxigeno = new_data[-1]  # Get the latest oxygen level
             self.x_data.append(timestamp)
             self.y_data.append(nivel_oxigeno)
 

@@ -1,39 +1,42 @@
+from utils.plot_utils import RealTimePlotter
 import streamlit as st
-import threading
+import pandas as pd
 import time
-import matplotlib.pyplot as plt
-from views.real_time_plot import RealTimePlot
-from data_pipeline.data_ingestion import DataSimulator
-
-# Inicializar módulos
-data_ingestion = DataSimulator()
-real_time_plot = RealTimePlot(data_ingestion)
 
 def home_view():
-    st.title("Sistema de Alertas de Oxígeno")
-    st.subheader("Monitoreo en tiempo real")
+    """Vista principal con monitoreo en tiempo real"""
+    
+    # Configuración inicial
+    st.title("📊 Monitor de Niveles de Oxígeno")
+    
+    # Inicializar plotter mejorado
+    plotter = RealTimePlotter()  # Initialize the plotter once
 
-    # Mostrar el gráfico en Streamlit
-    st.subheader("Gráfica en Tiempo Real")
-    plot_placeholder = st.empty()
-
-    def update_plot():
-        while True:
-            fig, ax = plt.subplots()
-            real_time_plot.update_plot(None)  # Actualiza los datos de la gráfica
-            ax.plot(real_time_plot.x_data, real_time_plot.y_data, marker='o', linestyle='-')
-            ax.set_title("Nivel de Oxígeno en Tiempo Real")
-            ax.set_xlabel("Tiempo")
-            ax.set_ylabel("Nivel de Oxígeno")
-            ax.grid(True)
-            plot_placeholder.pyplot(fig)
-            time.sleep(1)  # Actualiza cada segundo
-
-    # Iniciar la actualización en un hilo separado
-    threading.Thread(target=update_plot, daemon=True).start()
-
-    st.subheader("Últimas alertas generadas")
-    st.text_area("", value="No hay alertas aún.", height=150, key="alerts")
+    
+    # Layout principal
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        # Gráfico en tiempo real
+        st.subheader("Tendencia de Niveles (Últimos 100 puntos)")
+        chart = st.empty()
+        
+        # Histórico
+        st.subheader("Datos Históricos")
+        data_expander = st.expander("Ver datos completos")
+        with data_expander:
+            data_placeholder = st.empty()
+    
+    with col2:
+        # Métricas
+        st.subheader("📈 Métricas en Tiempo Real")
+        metric = st.metric("Último Valor", "Cargando...")
+        
+        # Alertas
+        st.subheader("⚠️ Alertas")
+        alert_placeholder = st.empty()
+    
+  
 
 if __name__ == "__main__":
     home_view()
