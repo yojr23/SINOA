@@ -5,84 +5,77 @@ class TransitionManager:
     def __init__(self):
         self.animation_lock = False
     
-    def _ensure_css(self):
-        """Inyecta los estilos CSS necesarios"""
+    def _inject_css(self):
         st.markdown("""
-        <style>
-            @keyframes fadeIn {
-                from { opacity: 0; transform: scale(0.95); }
-                to { opacity: 1; transform: scale(1); }
-            }
-            @keyframes fadeBackground {
-                0% { opacity: 0; }
-                100% { opacity: 1; }
-            }
-            .welcome-container {
-                position: relative;
-                min-height: 80vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-            }
-            .transition-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 1000;
-                pointer-events: none;
-            }
-        </style>
+            <style>
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+                @keyframes slideLeft {
+                    from { transform: translateX(-100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .transition-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    z-index: 1000;
+                    pointer-events: none;
+                }
+            </style>
         """, unsafe_allow_html=True)
 
     def welcome_animation(self):
-        """Animación de bienvenida mejorada"""
-        if self.animation_lock:
-            return
-            
+        if self.animation_lock: return
         self.animation_lock = True
+        placeholder = st.empty()
         try:
-            self._ensure_css()
-            placeholder = st.empty()
-            
-            for i in range(1, 4):
+            self._inject_css()
+            for i in range(3):
                 placeholder.markdown(f"""
-                <div class="welcome-container">
-                    <h1 style='
-                        color: #4CAF50;
-                        font-size: 2.5rem;
-                        animation: fadeIn 0.5s;
-                    '>
+                    <h1 style='animation: fadeIn 0.5s; text-align: center; color: #4CAF50;'>
                         Bienvenido a SINOA{'.' * i}
                     </h1>
-                </div>
                 """, unsafe_allow_html=True)
-                time.sleep(0.75)
-            
-            placeholder.empty()
+                time.sleep(0.5)
         finally:
+            placeholder.empty()
             self.animation_lock = False
 
-    def fade_transition(self, direction='out'):
-        """Transición de fundido optimizada"""
-        if self.animation_lock:
-            return
-            
+    def fade_transition(self, direction="out"):
+        if self.animation_lock: return
         self.animation_lock = True
+        overlay = st.empty()
         try:
-            overlay = st.empty()
-            steps = 6  # Reducido para mayor fluidez
-            for i in range(steps, 0, -1) if direction == 'out' else range(1, steps+1):
-                opacity = i/steps if direction == 'out' else 1-(i/steps)
+            steps = 10
+            for i in range(steps, 0, -1) if direction == "out" else range(1, steps+1):
+                opacity = i/steps if direction == "out" else 1-(i/steps)
                 overlay.markdown(
-                    f"""<div class="transition-overlay" style="background:white;opacity:{opacity};"></div>""",
+                    f"<div class='transition-overlay' style='background:white;opacity:{opacity};'></div>", 
                     unsafe_allow_html=True
                 )
-                time.sleep(0.04)
+                time.sleep(0.03)
+        finally:
             overlay.empty()
+            self.animation_lock = False
+
+    def slide_transition(self, direction="left"):
+        if self.animation_lock: return
+        self.animation_lock = True
+        try:
+            self._inject_css()
+            animation = f"slide{direction.capitalize()} 0.5s ease-out"
+            st.markdown(f"""
+                <div style='animation: {animation};'>
+                    <!-- Contenido animado -->
+                </div>
+            """, unsafe_allow_html=True)
+            time.sleep(0.5)
         finally:
             self.animation_lock = False
 
+# Instancia global para manejar transiciones
 transitions = TransitionManager()
