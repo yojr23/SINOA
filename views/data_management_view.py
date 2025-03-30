@@ -1,37 +1,35 @@
 import streamlit as st
-import time
 import os
-from controllers.sensor_drift_manager import SensorDriftManager
-from utils.data_loader import consolidate_data, consolidar_o_cargar_historico
+import pandas as pd
+from utils.data_loader import (
+    verificar_pruebas_anteriores,
+    limpiar_y_mover_archivos,
+    consolidar_datos_revisados,
+    manejar_archivos_rechazados,
+    registrar_actividad
+)
 from observers.alert_observer import AlertObserver
 
 # Rutas de datos
-HISTORICAL_DATA_PATH = 'data/registro_historico/consolidated_data.csv'
 INPUT_FOLDER = 'data/pruebas_anteriores'
-REVIEWED_FOLDER = 'data/pruebas_anteriores_revisados/'
-REJECTED_FOLDER = 'data/pruebas_rechazadas/'
+REVIEWED_FOLDER = 'data/pruebas_anteriores_revisados'
+REJECTED_FOLDER = 'data/pruebas_rechazadas'
+CONSOLIDATED_FILE = 'data/registro_historico/consolidated_data.csv'
+LOG_FILE = 'data/logs/operations.log'
 
-# Asegurar que las carpetas existen
-os.makedirs(INPUT_FOLDER, exist_ok=True)
-os.makedirs(REVIEWED_FOLDER, exist_ok=True)
-os.makedirs(REJECTED_FOLDER, exist_ok=True)
-
-drift_manager = SensorDriftManager(HISTORICAL_DATA_PATH)
-
-# Lista de observadores
-observers = []
-
-def add_observer(observer):
-    observers.append(observer)
-
-def notify_observers(message, alert_type):
-    for observer in observers:
-        observer.notify(message, alert_type)
+# Inicializar el objeto de alertas
+alert_observer = AlertObserver()
 
 def show_alert(message, alert_type="INFO"):
-    """Muestra una alerta en la interfaz y notifica a los observadores."""
-    st.error(message) if alert_type == "CRITICAL" else st.warning(message)
-    notify_observers(message, alert_type)
+    """Muestra una alerta en la interfaz y notifica al observador."""
+    if alert_type == "CRITICAL":
+        st.error(message)
+    elif alert_type == "WARNING":
+        st.warning(message)
+    elif alert_type == "INFO":
+        st.info(message)
+    # Notificar al observador para registrar la alerta
+    alert_observer.notify(message, alert_type)
 
 def check_folder_status():
     """Muestra el estado de las carpetas de datos."""
@@ -43,7 +41,6 @@ def check_folder_status():
     
     if archivos_pruebas:
         st.success(f"📂 {len(archivos_pruebas)} archivo(s) por cargar en 'pruebas_anteriores'.")
-        st.write(archivos_pruebas)
     else:
         st.warning("📂 No hay archivos en 'pruebas_anteriores'.")
     
@@ -58,51 +55,55 @@ def check_folder_status():
 def run_gui():
     st.title("Gestión de Datos Históricos")
     
-    # Mostrar estado de las carpetas
+    # Mostrar estado inicial de las carpetas
     check_folder_status()
     
-    # Opción de cargar datos históricos
-    if st.button("Cargar Datos Históricos", key="cargar_hist"):
-        try:
-            archivos_antes = len(os.listdir(INPUT_FOLDER))
-            df = consolidar_o_cargar_historico()
-            archivos_despues = len(os.listdir(INPUT_FOLDER))
-            archivos_cargados = archivos_antes - archivos_despues
-            
-            if archivos_cargados > 0:
-                st.success(f"Datos cargados correctamente. Se procesaron {archivos_cargados} archivos.")
-            else:
-                show_alert("No se encontraron archivos nuevos para cargar.", "NO_DATA")
-            
-            st.dataframe(df.head())  # Muestra una vista previa de los datos
-            st.session_state["ultima_carga"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        except FileNotFoundError:
-            show_alert("No hay datos históricos disponibles.", "NO_DATA")
-    
-    if "ultima_carga" in st.session_state:
-        st.info(f"Última carga de datos: {st.session_state['ultima_carga']}")
-    
-    # Opción de consolidar y analizar datos
-    if st.button("Consolidar y Analizar Datos Históricos", key="consolidar_hist"):
-        archivos_validos = [f for f in os.listdir(REVIEWED_FOLDER) if f.endswith(('.xls', '.xlsx'))]
-        
-        if not archivos_validos:
-            show_alert("No hay archivos disponibles para consolidar.", "NO_DATA")
+    # Botón para cargar datos históricos
+    if st.button("Cargar Datos Históricos"):
+        if not verificar_pruebas_anteriores():
+            show_alert("No hay archivos en la carpeta 'pruebas_anteriores'.", "WARNING")
         else:
-            try:
-                archivos_antes = len(archivos_validos)
-                consolidate_data(REVIEWED_FOLDER, HISTORICAL_DATA_PATH, REVIEWED_FOLDER)
-                archivos_despues = len([f for f in os.listdir(REVIEWED_FOLDER) if f.endswith(('.xls', '.xlsx'))])
-                archivos_consolidados = archivos_antes - archivos_despues
-                
-                if archivos_consolidados > 0:
-                    st.success(f"Datos consolidados correctamente. Se consolidaron {archivos_consolidados} archivos.")
-                    notify_observers("Datos históricos consolidados correctamente.", "INFO")
-                    st.session_state["ultima_consolidacion"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    show_alert("No se consolidaron nuevos archivos.", "NO_DATA")
-            except Exception as e:
-                show_alert(f"Error al consolidar los datos: {str(e)}", "CRITICAL")
+            limpiar_y_mover_archivos()
+            registrar_actividad("Archivos cargados y movidos a 'pruebas_anteriores_revisados'.")
+            show_alert("Archivos procesados y movidos a 'pruebas_anteriores_revisados'.", "INFO")
+        st.rerun()
     
-    if "ultima_consolidacion" in st.session_state:
-        st.info(f"Última consolidación de datos: {st.session_state['ultima_consolidacion']}")
+    # Botón para consolidar datos históricos
+    if st.button("Consolidar Datos Históricos"):
+        consolidar_datos_revisados()
+        registrar_actividad("Datos consolidados correctamente.")
+        show_alert("Datos consolidados correctamente.", "INFO")
+        st.rerun()
+    
+    # Estadísticas rápidas de los datos
+    if os.path.exists(CONSOLIDATED_FILE):
+        df = pd.read_csv(CONSOLIDATED_FILE)
+        st.subheader("Estadísticas de los Datos Consolidados")
+        st.write(f"Total de registros: {len(df)}")
+        st.write(f"Promedio: {df['Nivel de Oxígeno'].mean():.2f}")
+        st.write(f"Máximo: {df['Nivel de Oxígeno'].max():.2f}")
+        st.write(f"Mínimo: {df['Nivel de Oxígeno'].min():.2f}")
+    else:
+        st.warning("El archivo consolidado no existe. Por favor, consolida los datos primero.")
+    
+    # Limpieza manual de archivos rechazados
+    if os.listdir(REJECTED_FOLDER):
+        st.subheader("Archivos Rechazados")
+        archivos_rechazados = os.listdir(REJECTED_FOLDER)
+        for archivo in archivos_rechazados:
+            st.write(archivo)
+            if st.button(f"Eliminar {archivo}", key=f"eliminar_{archivo}"):
+                os.remove(os.path.join(REJECTED_FOLDER, archivo))
+                registrar_actividad(f"Archivo rechazado eliminado: {archivo}")
+                show_alert(f"Archivo {archivo} eliminado.", "INFO")
+                st.rerun()
+    else:
+        # Mostrar el número de archivos rechazados usando manejar_archivos_rechazados
+        num_rechazados = manejar_archivos_rechazados()
+        st.info(f"No hay archivos rechazados. Total rechazados registrados: {num_rechazados}")
+    
+    # Registro de actividades
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "r") as log_file:
+            st.subheader("Registro de Actividades")
+            st.text(log_file.read())

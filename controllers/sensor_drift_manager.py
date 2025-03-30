@@ -1,18 +1,21 @@
 import pandas as pd
+from observers.alert_observer import AlertObserver
 
 class SensorDriftManager:
     """
     Gestiona el análisis de desviación del sensor utilizando datos históricos.
     """
     
-    def __init__(self, historical_data_path):
+    def __init__(self, historical_data_path, alert_observer: AlertObserver):
         """
-        Inicializa el gestor con la ruta a los datos históricos.
+        Inicializa el gestor con la ruta a los datos históricos y un observador de alertas.
         
         Parameters:
         - historical_data_path (str): Ruta al archivo CSV con datos históricos.
+        - alert_observer (AlertObserver): Instancia para manejar alertas.
         """
         self.historical_data_path = historical_data_path
+        self.alert_observer = alert_observer
         self.data = None
     
     def load_historical_data(self):
@@ -54,24 +57,7 @@ class SensorDriftManager:
         """
         stats = self.calculate_statistics()
         if stats["std_dev"] > threshold:
+            mensaje = f"ALERTA: Se detectó una desviación inusual en el sensor. Desviación estándar: {stats['std_dev']:.2f}"
+            self.alert_observer.notify(mensaje, "WARNING")
             return True  # El sensor necesita ser reemplazado
         return False
-
-def analizar_datos(data):
-    """
-    Analiza los niveles de oxígeno y genera alertas si están fuera del rango.
-    
-    Parameters:
-    - data (DataFrame): Datos históricos con niveles de oxígeno.
-    """
-    limite_inferior = 2.0
-    limite_superior = 4.0
-    
-    for index, row in data.iterrows():
-        nivel_oxigeno = row['nivel_oxigeno']
-        if nivel_oxigeno < limite_inferior:
-            enviar_alerta(f"{row['timestamp']} - El nivel de oxígeno está por debajo del rango permitido.", "CRITICAL")
-        elif nivel_oxigeno > limite_superior:
-            enviar_alerta(f"{row['timestamp']} - El nivel de oxígeno está por encima del rango permitido.", "CRITICAL")
-        else:
-            print(f"{row['timestamp']} - Nivel de oxígeno en rango aceptable.")

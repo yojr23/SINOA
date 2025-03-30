@@ -1,10 +1,8 @@
-# Funciones auxiliares para manejo de correos
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 from email.utils import formataddr
-
-import smtplib
 
 def create_email_message(sender_email, recipient_email, subject, body):
     """
@@ -30,8 +28,6 @@ def create_email_message(sender_email, recipient_email, subject, body):
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
     return msg
 
-
-
 def send_email(smtp_server, port, sender_email, sender_password, msg):
     """
     Envía un correo electrónico usando el servidor SMTP configurado.
@@ -45,15 +41,19 @@ def send_email(smtp_server, port, sender_email, sender_password, msg):
     """
     try:
         with smtplib.SMTP(smtp_server, port) as server:
-            server.set_debuglevel(1)  # Activar depuración para ver interacciones SMTP
             server.ehlo()
             server.starttls()
             server.ehlo()
             server.login(sender_email, sender_password)
-            
-            # Usar send_message para garantizar la codificación adecuada
             server.send_message(msg)
-            
         print(f"Correo enviado a {msg['To']} con asunto: {msg['Subject']}")
+    except smtplib.SMTPAuthenticationError:
+        print("Error de autenticación: Verifica tu usuario y contraseña SMTP.")
+        raise
+    except smtplib.SMTPConnectError:
+        print("Error de conexión: No se pudo conectar al servidor SMTP.")
+        raise
     except Exception as e:
         print(f"Error al enviar el correo: {str(e)}")
+        print(f"Detalles del servidor SMTP: {smtp_server}:{port}")
+        raise
