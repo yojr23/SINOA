@@ -5,7 +5,7 @@ from utils.transitions_utils import transitions
 from views.welcome_view import show_welcome
 from views.home_view import home_view
 
-def menu_view():
+def menu_view(email_notifier):
     st.sidebar.title("Menú de Navegación")
     opciones = ["Home", "Gestión de Datos"]
     
@@ -15,14 +15,6 @@ def menu_view():
     # Widget de selección
     current = st.sidebar.radio("Opciones:", opciones, index=opciones.index(prev))
     
-    # Configuración del notificador
-    email_notifier = EmailNotifier(
-        smtp_server="smtp.example.com",
-        port=587,
-        sender_email="tu_email@example.com",
-        sender_password="tu_contraseña",
-        recipient_email="destinatario@example.com"
-    )
     
     # Lógica de transición entre vistas
     if current != prev:
@@ -31,7 +23,7 @@ def menu_view():
 
         # Cargar la vista correcta
         if current == "Home":
-            home_view()  # Muestra la vista de Home
+            home_view(email_notifier)  # Muestra la vista de Home
         elif current == "Gestión de Datos":
             run_gui()  
         # Establecer la vista actual en el estado de sesión
@@ -42,6 +34,6 @@ def menu_view():
     else:
         # Si no hay cambio de vista, solo mostrar la vista actual
         if current == "Home":
-            home_view()  # Muestra la vista de Home
+            home_view(email_notifier)  # Muestra la vista de Home
         elif current == "Gestión de Datos":
             run_gui()  # Muestra la vista de Gestión de Datos

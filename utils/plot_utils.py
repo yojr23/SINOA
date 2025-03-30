@@ -2,53 +2,71 @@ import streamlit as st
 import pandas as pd
 import time
 import numpy as np
+import altair as alt
 from data_pipeline.data_ingestion import DataSimulator
 
 class RealTimePlotter:
     """
-    Utilidad para visualización de datos en tiempo real.
+    Utilidad para visualización de datos en tiempo real con líneas de referencia y fondo coloreado.
     """
     
     def __init__(self, data_simulator=None):
         self.data_simulator = data_simulator or DataSimulator()
-        self.chart = st.empty()
         self.data_window = 100  # Número de puntos a mostrar
+        self.chart = st.empty()  # Espacio reservado para el gráfico
+        self.base_chart = None
+        self.setup_static_plot()
         
-    def setup_plot(self, title="Datos en Tiempo Real"):
-        """Configura el gráfico inicial"""
-        st.subheader(title)
+    def setup_static_plot(self):
+        """Configura la estructura inicial del gráfico con elementos estáticos"""
+        
+        # Agregar líneas de referencia
+        self.lineas = alt.Chart(pd.DataFrame({'Nivel Oxígeno': [4, 7]})).mark_rule(
+            color='gray', strokeDash=[5, 5]
+        ).encode(y='Nivel Oxígeno:Q')
+        
+        # Agregar áreas de color de fondo
+        self.areas = alt.Chart(pd.DataFrame({
+            'y': [3, 4, 7],
+            'y2': [4, 7, 8],
+            'color': ['red', 'green', 'yellow']
+        })).mark_rect(opacity=0.2).encode(
+            y='y:Q',
+            y2='y2:Q',
+            color=alt.Color('color:N', scale=alt.Scale(domain=['red', 'green', 'yellow'], range=['red', 'green', 'yellow']), legend=None)
+        )
+        
+        # Crear el gráfico base estático
+        self.base_chart = alt.layer(self.areas, self.lineas)
+        
+        # Iniciar el simulador de datos
         self.data_simulator.start_streaming()
         
-    def update_plot(self):
-        """Actualiza el gráfico con nuevos datos"""
-        while True:
-            data = self.data_simulator.get_latest_data(self.data_window)
-            if data:
-                df = pd.DataFrame({
-                    'index': range(len(data)),
-                    'Nivel Oxígeno': data,
-                    'Límite Inferior (4 mg/L)': [4]*len(data),
-                    'Límite Superior (7 mg/L)': [7]*len(data)
-                })
-                
-                # Create simple line chart showing oxygen level trend
-                if not hasattr(self, 'chart'):
-                    self.chart = st.line_chart(
-                        df[['Nivel Oxígeno']].set_index(df['index']),
-                        height=400,
-                        use_container_width=True
-                    )
-                else:
-                    # Update existing chart with new data
-                    self.chart.add_rows(df[['Nivel Oxígeno']].set_index(df['index']))
-            time.sleep(0.5)
-            
-    def create_realtime_plot(self, title="Nivel de Oxígeno"):
-        """Crea y mantiene actualizado un gráfico en tiempo real"""
-        self.setup_plot(title)
-        self.update_plot()
+    def create_realtime_plot(self):
+        """Devuelve el gráfico actualizado en tiempo real"""
+        data = self.data_simulator.get_latest_data(self.data_window)
+        if data:
+            df = pd.DataFrame({
+                'Tiempo': range(len(data)),
+                'Nivel Oxígeno': data
+            })
+
+            # Crear gráfico de línea dinámico
+            dynamic_line = alt.Chart(df).mark_line(color='blue').encode(
+                x=alt.X('Tiempo:Q', title=None, axis=alt.Axis(labels=False, ticks=False)),  # Ocultar valores del eje X
+                y=alt.Y('Nivel Oxígeno:Q', title='Nivel de Oxígeno (mg/L)', scale=alt.Scale(domain=[3, 8], nice=False))
+            )
+
+            # Combinar el gráfico base estático con la línea dinámica
+            updated_chart = alt.layer(self.base_chart, dynamic_line)
+            return updated_chart
+        return None
 
 def test_plot():
     """Función de prueba para visualización"""
     plotter = RealTimePlotter()
-    plotter.create_realtime_plot()
+    while True:
+        updated_chart = plotter.create_realtime_plot()
+        if updated_chart:
+            plotter.chart.altair_chart(updated_chart, use_container_width=True)
+        time.sleep(1)

@@ -62,7 +62,19 @@ class DataSimulator:
                 raise FileNotFoundError(f"Archivo {self.source_csv} no encontrado")
             
             full_data = pd.read_csv(self.source_csv)
-            oxygen_levels = full_data['Nivel de Oxígeno'].tolist()
+            # Filtrar y validar datos numéricos
+            oxygen_levels = []
+            for val in full_data['Nivel de Oxígeno']:
+                try:
+                    num = float(val)
+                    if not pd.isna(num):  # Ignorar valores NaN
+                        oxygen_levels.append(num)
+                except (ValueError, TypeError):
+                    continue
+            
+            if not oxygen_levels:
+                raise ValueError("No se encontraron valores válidos de oxígeno")
+                
             total_points = len(oxygen_levels)
             current_idx = 0
             
@@ -78,12 +90,12 @@ class DataSimulator:
                         'index': current_idx
                     }
                     
-                    # Mantener referencia a últimos 100 puntos
+                    # Mantener referencia a últimos 500 puntos
                     if self.current_data is None:
                         self.current_data = []
                     self.current_data.append(value)
-                    if len(self.current_data) > 100:
-                        self.current_data = self.current_data[-100:]
+                    if len(self.current_data) > 500:
+                        self.current_data = self.current_data[-500:]
                     
                     # Enviar datos
                     self.data_queue.put(data_point)
@@ -91,10 +103,14 @@ class DataSimulator:
                     
                     # Avanzar índice y esperar
                     current_idx += 1
-                    time.sleep(self.delay)
+                    time.sleep(max(0.1, self.delay))  # Ensure minimum delay
                     
+                except ZeroDivisionError:
+                    print("Advertencia: División por cero evitada")
+                    current_idx += 1
+                    time.sleep(1)
                 except Exception as e:
-                    print(f"Error en streaming: {e}")
+                    print(f"Error en streaming: {str(e)}")
                     time.sleep(5)
                     
         except Exception as e:
