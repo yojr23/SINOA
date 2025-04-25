@@ -69,4 +69,4 @@ def test_plot():
         updated_chart = plotter.create_realtime_plot()
         if updated_chart:
             plotter.chart.altair_chart(updated_chart, use_container_width=True)
-        time.sleep(1)
+        time.sleep(3.7)
